@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>解密游戏 - 隐藏的贴吧</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #e9edf2;
+            font-family: 'Segoe UI', 'Noto Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        /* 主容器 */
+        .game-wrapper {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+            overflow: hidden;
+            transition: all 0.2s;
+            position: relative;
+        }
+        /* 红色闪屏层 */
+        .red-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: red;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 0.05s linear;
+        }
+        /* ========= 谜题区域 ========= */
+        .puzzle-area {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 40px 28px;
+            text-align: center;
+            color: #f1f5f9;
+        }
+        .riddle {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 32px;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 64px;
+            backdrop-filter: blur(4px);
+            font-family: monospace;
+        }
+        .password-input {
+            width: 80%;
+            padding: 14px 20px;
+            font-size: 1.2rem;
+            text-align: center;
+            background: #020617;
+            border: 2px solid #3b82f6;
+            border-radius: 60px;
+            color: #b9e6ff;
+            font-family: monospace;
+            outline: none;
+            margin-bottom: 20px;
+        }
+        .check-btn {
+            background: #3b82f6;
+            border: none;
+            border-radius: 60px;
+            padding: 12px 28px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s;
+            box-shadow: 0 3px 0 #1e40af;
+        }
+        .check-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #1e40af;
+        }
+        .message {
+            margin-top: 24px;
+            font-size: 0.9rem;
+            padding: 8px;
+            border-radius: 40px;
+            background: rgba(0,0,0,0.4);
+        }
+        .error-msg {
+            color: #f87171;
+        }
+        /* ========= 贴吧区域（初始隐藏） ========= */
+        .tieba-area {
+            display: none;
+            background: white;
+        }
+        /* 贴吧头部 */
+        .tieba-header {
+            background: #2c6e9e;
+            background: linear-gradient(90deg, #2c6e9e, #1e4a76);
+            padding: 20px 24px;
+            color: white;
+        }
+        .tieba-header h1 {
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+        }
+        .tieba-header p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        /* 贴吧导航栏 */
+        .tiebar-nav {
+            background: #f0f2f5;
+            padding: 8px 20px;
+            border-bottom: 1px solid #d0d7de;
+            display: flex;
+            gap: 24px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .nav-item {
+            cursor: default;
+            color: #1e466e;
+        }
+        /* 帖子列表 */
+        .post-list {
+            padding: 12px 0;
+        }
+        .post-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px 24px;
+            border-bottom: 1px solid #edf2f7;
+            transition: background 0.1s;
+        }
+        .post-item:hover {
+            background: #fafcff;
+        }
+        /* 可点击的帖子增加鼠标手型 */
+        .clickable-post {
+            cursor: pointer;
+        }
+        .clickable-post:hover {
+            background-color: #eef2ff;
+        }
+        .avatar {
+            width: 44px;
+            height: 44px;
+            background: #a0c4e2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: #d4e2f0;
+            color: #1f4662;
+        }
+        .post-content {
+            flex: 1;
+        }
+        .post-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #0f2b3d;
+        }
+        .post-meta {
+            font-size: 0.75rem;
+            color: #6c7e97;
+            display: flex;
+            gap: 12px;
+        }
+        .reply-area {
+            margin: 16px 24px 24px 24px;
+            background: #f8fafc;
+            border-radius: 32px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .reply-input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            resize: none;
+            font-family: inherit;
+        }
+        .reply-btn {
+            margin-top: 10px;
+            background: #2c6e9e;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 6px 18px;
+            cursor: pointer;
+        }
+        .fake-footer {
+            text-align: center;
+            padding: 18px;
+            font-size: 0.7rem;
+            color: #6c7e97;
+            border-top: 1px solid #eef2f6;
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <!-- 红色闪屏层 -->
+    <div id="redFlash" class="red-flash"></div>
+
+    <!-- 谜题区域 -->
+    <div id="puzzleArea" class="puzzle-area">
+        <div class="riddle">
+            🔐 谜面：Chex的生日是？ (YYYYMMDD)
+        </div>
+        <input type="text" id="passwordInput" class="password-input" placeholder="输入 8 位数字" autocomplete="off">
+        <div>
+            <button id="checkBtn" class="check-btn">🔍 验证并进入贴吧</button>
+        </div>
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- 贴吧区域 (隐藏) -->
+    <div id="tiebaArea" class="tieba-area">
+        <div class="tieba-header">
+            <h1>解密成功 · 隐秘之吧</h1>
+            <p>欢迎回来，调查员。这里藏着你需要的真相。</p>
+        </div>
+        <div class="tiebar-nav">
+            <span class="nav-item">🏠 首页</span>
+            <span class="nav-item">📜 解密档案</span>
+            <span class="nav-item">💬 讨论区</span>
+            <span class="nav-item">🔒 隐藏版块</span>
+        </div>
+        <div class="post-list">
+            <div class="post-item">
+                <div class="avatar">🧩</div>
+                <div class="post-content">
+                    <div class="post-title">【剧透】Chex的生日线索实际上藏在……</div>
+                    <div class="post-meta">楼主：解密猎手  ·  132回复  ·  今天 09:23</div>
+                </div>
+            </div>
+            <!-- 下面这个帖子增加了可点击属性和红色闪屏功能 -->
+            <div class="post-item clickable-post" id="nextLevelPost">
+                <div class="avatar">🤖</div>
+                <div class="post-content">
+                    <div class="post-title">下一关的入口坐标是什么？有人发现吗？</div>
+                    <div class="post-meta">楼主：Mystery_X  ·  89回复  ·  昨天 22:15</div>
+                </div>
+            </div>
+            <div class="post-item">
+                <div class="avatar">🕵️</div>
+                <div class="post-content">
+                    <div class="post-title">【解密指引】贴吧页面隐藏了第三关的线索，仔细看页脚</div>
+                    <div class="post-meta">楼主：代码诗人  ·  45回复  ·  昨天 14:07</div>
+                </div>
+            </div>
+            <div class="post-item">
+                <div class="avatar">🔑</div>
+                <div class="post-content">
+                    <div class="post-title">关于“银河电灯老师”未公开的彩蛋讨论</div>
+                    <div class="post-meta">楼主：灯灯  ·  223回复  ·  前天 19:32</div>
+                </div>
+            </div>
+        </div>
+        <div class="reply-area">
+            <textarea class="reply-input" rows="1" placeholder="发表回复... (模拟贴吧交互)"></textarea>
+            <button class="reply-btn">发布</button>
+            <div style="font-size: 0.7rem; margin-top: 8px; color:gray;">※ 解密游戏演示，回复不会保存</div>
+        </div>
+        <div class="fake-footer">
+            <span>© 隐秘贴吧 · 第三十六号房间</span>   |  
+            <span style="cursor:pointer;" id="resetGameHint">🔙 重新解谜</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CORRECT_PASSWORD = "20040218";
+    const puzzleDiv = document.getElementById('puzzleArea');
+    const tiebaDiv = document.getElementById('tiebaArea');
+    const passwordInput = document.getElementById('passwordInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const messageSpan = document.getElementById('message');
+    const resetBtn = document.getElementById('resetGameHint');
+    const redFlash = document.getElementById('redFlash');
+
+    // 红色闪屏函数
+    function triggerRedFlash() {
+        // 先确保透明度为0，然后立刻设置为高亮并渐隐
+        redFlash.style.transition = 'none';
+        redFlash.style.opacity = '0';
+        // 强制重绘
+        void redFlash.offsetHeight;
+        redFlash.style.transition = 'opacity 0.15s ease-out';
+        redFlash.style.opacity = '0.85';
+        setTimeout(() => {
+            redFlash.style.opacity = '0';
+        }, 200);
+    }
+
+    function showTieba() {
+        puzzleDiv.style.display = 'none';
+        tiebaDiv.style.display = 'block';
+    }
+
+    function resetToPuzzle() {
+        puzzleDiv.style.display = 'block';
+        tiebaDiv.style.display = 'none';
+        passwordInput.value = '';
+        messageSpan.innerHTML = '';
+        messageSpan.className = 'message';
+    }
+
+    function checkPassword() {
+        const userInput = passwordInput.value.trim();
+        if (userInput === CORRECT_PASSWORD) {
+            showTieba();
+        } else {
+            messageSpan.innerHTML = '❌ 密码错误！再仔细想想Chex的生日。';
+            messageSpan.className = 'message error-msg';
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    }
+
+    // 为“下一关入口坐标”帖子添加点击闪屏效果
+    const nextLevelPost = document.getElementById('nextLevelPost');
+    if (nextLevelPost) {
+        nextLevelPost.addEventListener('click', function(e) {
+            e.stopPropagation();
+            triggerRedFlash();
+            // 可选：控制台输出一下，方便调试
+            console.log('红色闪屏已触发 —— 下一关入口坐标的线索也许藏在闪屏中？');
+        });
+    }
+
+    checkBtn.addEventListener('click', checkPassword);
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkPassword();
+    });
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetToPuzzle);
+    }
+
+    // 控制台彩蛋
+    console.log("%c🔎 提示: 正确密码是 Chex 的生日(8位数字) —— 贴吧隐藏入口", "color: #3b82f6; font-size: 14px;");
+    console.log("%c💥 试试点击帖子「下一关的入口坐标是什么？」会有红色闪屏", "color: #ff6600;");
+</script>
+</body>
+</html>
